@@ -1,48 +1,46 @@
 pipeline {
     agent any
+
     tools{
         maven 'maven'
     }
 
-    stages{
+    parameters{
+        string(name: 'tomcat_stg', defaultValue: '43.207.224.32', description: 'Staging Server')
+        string(name: 'tomcat_prod', defaultValue: '52.198.219.87', description: 'Production Server')
+    }
+
+    triggers {
+         pollSCM('* * * * *')
+     }
+
+     stages{
         stage('Build'){
             steps {
                 sh 'mvn clean package'
             }
             post {
                 success {
-                    echo '开始存档....'
+                    echo '開始存檔...'
                     archiveArtifacts artifacts: '**/target/*.war'
                 }
             }
         }
-        stage('Deploy to staging'){
-            steps{
-                build job:'deploy-to-staging'
-            }
-        }
 
-         stage ('Deploy to Production'){
-            steps{
-                timeout(time:5, unit:'DAYS'){
-                    input message:'是否部署到生产环境?' 
+     stage ('Deployments'){
+            parallel{
+                stage ('Deploy to Staging'){
+                    steps {
+                        sh "scp -i /home/nick/KeyForJenkinsTomcat.pem **/target/*.war ec2-user@${params.stg}:/usr/share/tomcat/webapps"
+                    }
                 }
 
-                build job: 'deploy-to-production'
-            }
-            post {
-                success {
-                    echo '代码成功部署到生产环境'
-                }
-
-                failure {
-                    echo ' 部署失败'
+                stage ("Deploy to Production"){
+                    steps {
+                        sh "scp -i /home/nick/KeyForJenkinsTomcat.pem **/target/*.war ec2-user@${params.tomcat_prod}:/usr/share/tomcat/webapps"
+                    }
                 }
             }
         }
-
-
-
-
     }
 }

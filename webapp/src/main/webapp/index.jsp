@@ -1,1 +1,1 @@
-Hello, Welcome to this course! This is Nick....!
+Hello, Welcome to this course! AWS EC2!
